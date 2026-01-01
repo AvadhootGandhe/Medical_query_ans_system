@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+*.faiss
+fassi_db/content/faiss_db/index.faiss
+fassi_db/
+
+
 # Distribution / packaging
 .Python
 build/
