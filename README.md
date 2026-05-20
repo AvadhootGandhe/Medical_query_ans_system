@@ -147,114 +147,11 @@ Medical domain retrieval is inherently harder than general-domain Q&A:
 | **LLM** | Google Gemini Flash 2.5 |
 | **Backend API** | Flask |
 | **API Testing** | Postman |
-| **NLP / Embeddings** | Sentence Transformers / Google Embedding API |
+| **NLP / Embeddings** | Google Embedding API |
 | **Data Processing** | Python, Pandas, NumPy |
 | **Dataset** | Kaggle Medical Q&A Dataset |
 | **Evaluation** | Custom Recall@K, Precision@K, MRR implementation |
 
----
-
-## 📁 Project Structure
-
-```
-medquery/
-├── indexing/
-│   ├── build_index.py          # FAISS index construction
-│   ├── chunking.py             # Document chunking strategy
-│   └── embeddings.py           # Embedding generation pipeline
-│
-├── retrieval/
-│   ├── faiss_retriever.py      # FAISS similarity search
-│   └── reranker.py             # Optional re-ranking layer
-│
-├── generation/
-│   ├── gemini_client.py        # Gemini Flash 2.5 API integration
-│   └── prompt_builder.py       # Context assembly & prompt engineering
-│
-├── evaluation/
-│   ├── metrics.py              # Recall@K, Precision@K, MRR implementation
-│   ├── eval_runner.py          # End-to-end evaluation pipeline
-│   └── results/
-│       └── benchmark_report.json  # Evaluation results
-│
-├── api/
-│   ├── app.py                  # Flask application entry point
-│   └── routes.py               # API route definitions
-│
-├── data/
-│   └── kaggle_medical/         # Raw dataset (not tracked in git)
-│
-├── index/
-│   └── faiss.index             # Persisted FAISS index (not tracked in git)
-│
-├── tests/
-│   └── postman_collection.json # Postman test collection
-│
-├── requirements.txt
-└── README.md
-```
-
----
-
-## ⚙️ Getting Started
-
-### Prerequisites
-
-- Python 3.9+
-- Google Gemini API key
-- Kaggle account (for dataset download)
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/AvadhootGandhe/Medical_query_ans_system.git
-cd Medical_query_ans_system
-```
-
-### 2. Install Dependencies
-
-```bash
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 3. Set Up Environment Variables
-
-```bash
-cp .env.example .env
-```
-
-Add your API key to `.env`:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-
-### 4. Download Dataset
-
-```bash
-kaggle datasets download -d <medical-qa-dataset>
-mv dataset.csv data/kaggle_medical/
-```
-
-### 5. Build FAISS Index
-
-```bash
-python indexing/build_index.py
-```
-
-This processes the dataset, generates embeddings, and saves the FAISS index to `index/faiss.index`.
-
-### 6. Start the Flask API
-
-```bash
-python api/app.py
-```
-
-API runs at [http://localhost:5000](http://localhost:5000)
-
----
 
 ## 📡 API Reference
 
@@ -303,33 +200,5 @@ Submit a medical query and receive a grounded answer.
 - **Domain:** General medical knowledge, symptoms, diagnoses, treatments
 - **Format:** Question-Answer pairs with medical context
 - **Processing:** Chunked into retrievable segments, embedded, and indexed via FAISS
-
----
-
-## 🔮 Roadmap
-
-- [ ] Replace general embeddings with **BioBERT / MedBERT** for domain-specific retrieval
-- [ ] Add **BM25 sparse retrieval** + FAISS hybrid search for improved MRR
-- [ ] Implement **cross-encoder re-ranking** to boost Precision@K
-- [ ] Add **source citation** in generated answers for traceability
-- [ ] Build **Streamlit frontend** for non-technical medical professional access
-- [ ] Fine-tune on **MedQA / PubMedQA** datasets for higher benchmark scores
-- [ ] Add **conversation memory** for multi-turn medical Q&A sessions
-
----
-
-## 👨‍💻 Author
-
-**Avadhoot Gandhe**  
-B.Tech Computer Science & Engineering — MIT Pune  
-[GitHub](https://github.com/AvadhootGandhe) · [LinkedIn](#) · avadhoot456@gmail.com
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
 
 > Built to demonstrate production-grade RAG pipeline design — from vector indexing and retrieval to LLM-grounded generation and statistical evaluation.
