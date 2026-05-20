@@ -2,7 +2,7 @@
 
 > **Retrieval-Augmented Generation pipeline for domain-specific medical Q&A using FAISS vector search and Gemini Flash 2.5**
 
-MedQuery is a production-ready medical query answering system built on a Retrieval-Augmented Generation (RAG) architecture. It combines dense vector retrieval via FAISS with Google's Gemini Flash 2.5 LLM to answer medical questions grounded in a curated Kaggle medical knowledge base — evaluated end-to-end with rigorous statistical retrieval benchmarks.
+MedQuery is a medical query answering system built on a Retrieval-Augmented Generation (RAG) architecture. It combines dense vector retrieval via FAISS with Google's Gemini Flash 2.5 LLM to answer medical questions grounded in a curated Kaggle medical knowledge base — evaluated end-to-end with rigorous statistical retrieval benchmarks.
 
 ![Tech Stack](https://img.shields.io/badge/Backend-Flask-000000?style=flat-square&logo=flask)
 ![Tech Stack](https://img.shields.io/badge/Vector%20DB-FAISS-009688?style=flat-square)
