@@ -1,164 +1,344 @@
 # 🏥 MedQuery — RAG Medical Query Answering System
 
-> **Retrieval-Augmented Generation pipeline for domain-specific medical Q&A using FAISS vector search and Gemini Flash 2.5**
+> **Production-grade Retrieval-Augmented Generation (RAG) pipeline for medical question answering using FAISS vector retrieval and Gemini Flash 2.5**
 
-MedQuery is a medical query answering system built on a Retrieval-Augmented Generation (RAG) architecture. It combines dense vector retrieval via FAISS with Google's Gemini Flash 2.5 LLM to answer medical questions grounded in a curated Kaggle medical knowledge base — evaluated end-to-end with rigorous statistical retrieval benchmarks.
+MedQuery is a domain-specific medical question answering system built using a Retrieval-Augmented Generation (RAG) architecture. The system combines semantic vector retrieval through FAISS with Google's Gemini Flash 2.5 LLM to generate grounded, context-aware medical answers from a large unstructured medical knowledge corpus.
 
-![Tech Stack](https://img.shields.io/badge/Backend-Flask-000000?style=flat-square&logo=flask)
-![Tech Stack](https://img.shields.io/badge/Vector%20DB-FAISS-009688?style=flat-square)
-![Tech Stack](https://img.shields.io/badge/LLM-Gemini%20Flash%202.5-4285F4?style=flat-square&logo=google)
-![Tech Stack](https://img.shields.io/badge/Language-Python-3776AB?style=flat-square&logo=python)
-![Metric](https://img.shields.io/badge/Recall@K-33.94%25-orange?style=flat-square)
-![Metric](https://img.shields.io/badge/MRR-27.38%25-blue?style=flat-square)
+The project focuses on solving one of the biggest challenges in medical NLP systems — reducing hallucinations in LLM-generated responses by grounding every answer in retrieved evidence from relevant medical documents.
 
 ---
 
-## 📌 Table of Contents
+# 📌 Table of Contents
 
-- [Overview](#-overview)
-- [Architecture](#-architecture)
-- [RAG Pipeline](#-rag-pipeline)
-- [Evaluation Metrics](#-evaluation-metrics)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
-- [API Reference](#-api-reference)
-- [Dataset](#-dataset)
-- [Roadmap](#-roadmap)
-
----
-
-## 🧠 Overview
-
-Medical Q&A is one of the most demanding NLP tasks — answers must be accurate, grounded in verified knowledge, and traceable to source documents. Generic LLMs hallucinate medical facts. MedQuery solves this by grounding every response in a curated medical corpus using RAG architecture:
-
-```
-User Query → Dense Retrieval (FAISS) → Context Injection → Gemini Flash 2.5 → Grounded Answer
-```
-
-The system is fully evaluated using standard information retrieval metrics — Recall@K, Precision@K, and Mean Reciprocal Rank (MRR) — providing transparent, reproducible benchmarking of retrieval quality.
+* [Overview](#-overview)
+* [System Architecture](#-system-architecture)
+* [RAG Pipeline](#-rag-pipeline)
+* [Evaluation Metrics](#-evaluation-metrics)
+* [Tech Stack](#-tech-stack)
+* [API Reference](#-api-reference)
+* [Project Workflow](#-project-workflow)
+* [Performance Analysis](#-performance-analysis)
+* [Future Improvements](#-future-improvements)
+* [Getting Started](#-getting-started)
+* [Folder Structure](#-folder-structure)
+* [Dataset](#-dataset)
+* [Conclusion](#-conclusion)
 
 ---
 
-## 🏗 Architecture
+# 🧠 Overview
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                     MEDQUERY RAG PIPELINE                        │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│   INDEXING PHASE (offline)                                       │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │  Kaggle Medical Dataset                                  │   │
-│   │        │                                                 │   │
-│   │        ▼                                                 │   │
-│   │  Text Chunking & Preprocessing                           │   │
-│   │        │                                                 │   │
-│   │        ▼                                                 │   │
-│   │  Embedding Generation                                    │   │
-│   │        │                                                 │   │
-│   │        ▼                                                 │   │
-│   │  FAISS Vector Index (stored on disk)                     │   │
-│   └─────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│   QUERY PHASE (real-time)                                        │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │  User Medical Query                                      │   │
-│   │        │                                                 │   │
-│   │        ▼                                                 │   │
-│   │  Query Embedding                                         │   │
-│   │        │                                                 │   │
-│   │        ▼                                                 │   │
-│   │  FAISS Similarity Search → Top-K Documents              │   │
-│   │        │                                                 │   │
-│   │        ▼                                                 │   │
-│   │  Context Assembly & Prompt Engineering                   │   │
-│   │        │                                                 │   │
-│   │        ▼                                                 │   │
-│   │  Gemini Flash 2.5 → Grounded Answer Generation          │   │
-│   │        │                                                 │   │
-│   │        ▼                                                 │   │
-│   │  Flask API → JSON Response                               │   │
-│   └─────────────────────────────────────────────────────────┘   │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
+Medical question answering is one of the most sensitive NLP applications because inaccurate responses can lead to misinformation. Traditional Large Language Models often hallucinate medical facts when operating without verified context.
+
+MedQuery addresses this problem using Retrieval-Augmented Generation (RAG), where relevant medical documents are first retrieved from a vector database and then injected into the LLM prompt before answer generation.
+
+The complete workflow:
+
+```text
+User Query
+    ↓
+Semantic Embedding
+    ↓
+FAISS Vector Retrieval
+    ↓
+Top-K Relevant Medical Chunks
+    ↓
+Context Injection
+    ↓
+Gemini Flash 2.5
+    ↓
+Grounded Medical Answer
 ```
 
----
-
-## 🔄 RAG Pipeline
-
-### Stage 1 — Document Ingestion & Chunking
-- Loaded Kaggle medical Q&A dataset into the pipeline
-- Applied text chunking strategy to split documents into retrievable segments
-- Cleaned and normalised medical text for embedding quality
-
-### Stage 2 — FAISS Vector Indexing
-- Generated dense embeddings for all document chunks
-- Built a FAISS flat index for exact nearest-neighbour search
-- Persisted index to disk for fast reload without re-indexing
-
-### Stage 3 — Query Retrieval
-- Embedded incoming user query using the same embedding model
-- Ran FAISS similarity search to retrieve Top-K most relevant document chunks
-- Ranked results by cosine similarity score
-
-### Stage 4 — Context-Grounded Generation
-- Assembled retrieved chunks into a structured prompt context window
-- Injected context + user query into Gemini Flash 2.5
-- Generated grounded medical answers based only on retrieved evidence
-
-### Stage 5 — API Serving & Evaluation
-- Exposed full pipeline as Flask REST API
-- Tested end-to-end with Postman across evaluation query set
-- Computed Recall@K, Precision@K, and MRR for retrieval quality benchmarking
+This architecture ensures that generated responses remain context-aware, traceable, and grounded in retrieved medical evidence.
 
 ---
 
-## 📊 Evaluation Metrics
+# 🏗 System Architecture
 
-The retrieval pipeline was evaluated using standard information retrieval benchmarks:
-
-| Metric | Score | What It Measures |
-|---|---|---|
-| **Recall@K** | 33.94% | Fraction of relevant docs successfully retrieved in top-K |
-| **Precision@K** | 11.56% | Fraction of retrieved docs that are actually relevant |
-| **MRR (Mean Reciprocal Rank)** | 27.38% | Average rank position of the first relevant result |
-
-### Understanding the Scores
-
-Medical domain retrieval is inherently harder than general-domain Q&A:
-- Medical terminology is highly specialised — embedding models trained on general text underperform on clinical language
-- The Kaggle dataset contains overlapping medical concepts that reduce precision
-- These scores reflect honest, untuned baseline performance — a strong foundation for fine-tuning
-
-### Improvement Pathways
-- **Fine-tuned medical embeddings** (BioBERT, MedBERT) would significantly improve Recall@K
-- **Re-ranking layer** (cross-encoder) after FAISS retrieval would improve Precision@K
-- **Hybrid retrieval** (sparse BM25 + dense FAISS) would improve MRR on rare medical terms
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                    MEDQUERY ARCHITECTURE                    │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  OFFLINE INDEXING PIPELINE                                   │
+│                                                              │
+│  Large Unstructured Medical Dataset                          │
+│                 │                                            │
+│                 ▼                                            │
+│      Text Cleaning & Preprocessing                           │
+│                 │                                            │
+│                 ▼                                            │
+│         Document Chunking                                    │
+│                 │                                            │
+│                 ▼                                            │
+│        Embedding Generation                                  │
+│                 │                                            │
+│                 ▼                                            │
+│      FAISS Vector Index Storage                              │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ONLINE QUERY PIPELINE                                       │
+│                                                              │
+│          User Query                                          │
+│                 │                                            │
+│                 ▼                                            │
+│         Query Embedding                                      │
+│                 │                                            │
+│                 ▼                                            │
+│      FAISS Similarity Search                                 │
+│                 │                                            │
+│                 ▼                                            │
+│      Top-K Relevant Chunks                                   │
+│                 │                                            │
+│                 ▼                                            │
+│   Prompt Engineering + Context Assembly                      │
+│                 │                                            │
+│                 ▼                                            │
+│       Gemini Flash 2.5 LLM                                  │
+│                 │                                            │
+│                 ▼                                            │
+│      Grounded Medical Response                               │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 🛠 Tech Stack
+# 🔄 RAG Pipeline
 
-| Layer | Technology |
-|---|---|
-| **Vector Database** | FAISS (Facebook AI Similarity Search) |
-| **LLM** | Google Gemini Flash 2.5 |
-| **Backend API** | Flask |
-| **API Testing** | Postman |
-| **NLP / Embeddings** | Google Embedding API |
-| **Data Processing** | Python, Pandas, NumPy |
-| **Dataset** | Kaggle Medical Q&A Dataset |
-| **Evaluation** | Custom Recall@K, Precision@K, MRR implementation |
+## Stage 1 — Data Ingestion & Preprocessing
 
+The system begins by loading a large unstructured medical dataset containing medical questions, answers, and contextual information.
 
-## 📡 API Reference
+### Processing Steps
 
-### `POST /query`
-Submit a medical query and receive a grounded answer.
+* Removed noisy and duplicate entries
+* Standardised medical terminology formatting
+* Normalised text for embedding consistency
+* Split long documents into smaller retrievable chunks
 
-**Request:**
+### Why Chunking Matters
+
+Large documents cannot be efficiently retrieved as a single vector. Chunking improves:
+
+* Retrieval granularity
+* Semantic similarity matching
+* Context precision during generation
+
+---
+
+## Stage 2 — Embedding Generation
+
+Each medical text chunk is converted into dense vector embeddings using Google's embedding API.
+
+These embeddings capture:
+
+* Semantic meaning
+* Medical terminology relationships
+* Context similarity between documents
+
+The same embedding model is later used for incoming user queries to maintain vector consistency.
+
+---
+
+## Stage 3 — FAISS Vector Indexing
+
+The generated embeddings are stored inside a FAISS vector database.
+
+### Why FAISS?
+
+FAISS enables:
+
+* High-speed similarity search
+* Scalable nearest-neighbour retrieval
+* Efficient vector indexing for large datasets
+
+### Retrieval Workflow
+
+```text
+User Query Vector
+        ↓
+Cosine Similarity Search
+        ↓
+Top-K Most Relevant Chunks
+```
+
+The retrieved chunks become the grounding context for answer generation.
+
+---
+
+## Stage 4 — Context-Grounded Generation
+
+The retrieved chunks are injected into a carefully engineered prompt alongside the user query.
+
+### Prompt Structure
+
+```text
+Retrieved Context:
+[Top-K medical chunks]
+
+User Question:
+[User Query]
+
+Instruction:
+Answer only using the provided medical context.
+```
+
+Gemini Flash 2.5 then generates a grounded answer based strictly on the retrieved evidence.
+
+### Benefits
+
+* Reduces hallucination
+* Improves factual consistency
+* Increases answer traceability
+* Keeps responses medically relevant
+
+---
+
+## Stage 5 — API Serving
+
+The complete RAG pipeline is deployed as a Flask REST API.
+
+### Features
+
+* Real-time medical query answering
+* JSON-based API responses
+* Retrieval metadata support
+* Retrieval timing analysis
+
+---
+
+# 📊 Evaluation Metrics
+
+The retrieval system was evaluated using standard Information Retrieval (IR) metrics.
+
+| Metric                     | Score  |
+| -------------------------- | ------ |
+| Recall@K                   | 33.94% |
+| Precision@K                | 11.56% |
+| Mean Reciprocal Rank (MRR) | 27.38% |
+
+---
+
+## 📈 Metric Explanation
+
+### Recall@K
+
+Measures how many relevant documents were successfully retrieved within the top-K results.
+
+Higher Recall means:
+
+* Better document coverage
+* Lower chance of missing critical context
+
+---
+
+### Precision@K
+
+Measures how many retrieved documents are actually relevant.
+
+Higher Precision means:
+
+* Cleaner retrieval
+* Less irrelevant context passed to the LLM
+
+---
+
+### Mean Reciprocal Rank (MRR)
+
+Measures how early the first relevant document appears in retrieval results.
+
+Higher MRR means:
+
+* Faster relevant retrieval
+* Better ranking quality
+
+---
+
+# 🔍 Performance Analysis
+
+Medical retrieval is significantly harder than general-domain retrieval because:
+
+* Medical terminology is highly specialised
+* Similar diseases often share overlapping symptoms
+* Semantic ambiguity exists across clinical terms
+* General-purpose embeddings are not fully optimised for medical NLP
+
+The current scores represent an honest baseline implementation without heavy domain fine-tuning.
+
+---
+
+# 🚀 Future Improvements
+
+## 1. Medical-Specific Embeddings
+
+Using:
+
+* BioBERT
+* ClinicalBERT
+* MedBERT
+
+would significantly improve semantic retrieval quality.
+
+---
+
+## 2. Hybrid Retrieval
+
+Combining:
+
+* BM25 sparse retrieval
+* Dense vector retrieval
+
+can improve performance on rare medical terms.
+
+---
+
+## 3. Re-Ranking Layer
+
+Adding a transformer cross-encoder after FAISS retrieval can improve:
+
+* Precision@K
+* Ranking quality
+* Context relevance
+
+---
+
+## 4. Streaming Responses
+
+Implementing token streaming would improve:
+
+* Response latency
+* User experience
+* Real-time interaction
+
+---
+
+# 🛠 Tech Stack
+
+| Layer                  | Technology                           |
+| ---------------------- | ------------------------------------ |
+| Backend Framework      | Flask                                |
+| Vector Database        | FAISS                                |
+| LLM                    | Gemini Flash 2.5                     |
+| Embedding Model        | Google Embedding API                 |
+| Programming Language   | Python                               |
+| Data Processing        | Pandas, NumPy                        |
+| API Testing            | Postman                              |
+| Evaluation             | Custom IR Metrics                    |
+| Retrieval Architecture | Retrieval-Augmented Generation (RAG) |
+
+---
+
+# 📡 API Reference
+
+## POST `/query`
+
+Submit a medical query.
+
+### Request
+
 ```json
 {
   "query": "What are the symptoms of Type 2 diabetes?",
@@ -166,12 +346,15 @@ Submit a medical query and receive a grounded answer.
 }
 ```
 
-**Response:**
+---
+
+### Response
+
 ```json
 {
   "status": "success",
   "query": "What are the symptoms of Type 2 diabetes?",
-  "answer": "Based on the retrieved medical sources, Type 2 diabetes symptoms include...",
+  "answer": "Based on the retrieved medical context...",
   "retrieved_contexts": [
     {
       "rank": 1,
@@ -186,19 +369,120 @@ Submit a medical query and receive a grounded answer.
 }
 ```
 
-### `GET /health`
+---
+
+## GET `/health`
+
+### Response
 
 ```json
-{ "status": "healthy", "index_loaded": true, "model": "gemini-flash-2.5" }
+{
+  "status": "healthy",
+  "index_loaded": true,
+  "model": "gemini-flash-2.5"
+}
 ```
 
 ---
 
-## 📂 Dataset
+# ⚙ Getting Started
 
-- **Source:** Kaggle Medical Q&A Dataset
-- **Domain:** General medical knowledge, symptoms, diagnoses, treatments
-- **Format:** Question-Answer pairs with medical context
-- **Processing:** Chunked into retrievable segments, embedded, and indexed via FAISS
+## Clone Repository
 
-> Built to demonstrate production-grade RAG pipeline design — from vector indexing and retrieval to LLM-grounded generation and statistical evaluation.
+```bash
+git clone <your-repository-url>
+cd MedQuery
+```
+
+---
+
+## Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Run Flask Server
+
+```bash
+python app.py
+```
+
+---
+
+## API Runs On
+
+```text
+http://127.0.0.1:5000
+```
+
+---
+
+
+
+# 📂 Dataset
+
+### Dataset Characteristics
+
+* Large-scale unstructured medical corpus
+* Medical symptoms and diagnosis data
+* Disease-treatment relationships
+* Clinical question-answer pairs
+
+### Processing Pipeline
+
+* Text cleaning
+* Chunking
+* Embedding generation
+* Vector indexing using FAISS
+
+---
+
+# 🧪 Retrieval Evaluation Workflow
+
+```text
+Evaluation Query
+        ↓
+Embedding Generation
+        ↓
+FAISS Retrieval
+        ↓
+Top-K Retrieved Chunks
+        ↓
+Ground Truth Comparison
+        ↓
+Recall@K / Precision@K / MRR
+```
+
+---
+
+# 🎯 Key Learnings
+
+This project demonstrates:
+
+* End-to-end RAG system development
+* Vector database implementation
+* Dense retrieval systems
+* Prompt engineering
+* LLM grounding strategies
+* Retrieval evaluation techniques
+* Medical-domain NLP challenges
+
+---
+
+# ✅ Conclusion
+
+MedQuery demonstrates how Retrieval-Augmented Generation can significantly improve reliability in medical question answering systems.
+
+By combining:
+
+* FAISS vector retrieval
+* Semantic embeddings
+* Prompt engineering
+* Gemini Flash 2.5
+
+the system produces grounded, context-aware medical responses while maintaining transparency through retrieval evaluation metrics.
+
+The project serves as a strong foundation for building production-scale domain-specific RAG systems in healthcare and other high-accuracy NLP applications.
